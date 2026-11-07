@@ -116,6 +116,13 @@ textarea{resize:vertical;min-height:70px}
 .hint{font-size:13px;color:var(--mute)}
 #toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#23201d;color:#fff;padding:9px 18px;border-radius:var(--r);opacity:0;pointer-events:none;transition:opacity .2s;z-index:50;display:flex;gap:14px;align-items:center;max-width:92vw}
 #toast.on{opacity:1}
+#instBar{position:fixed;left:12px;right:12px;bottom:12px;z-index:60;display:flex;align-items:center;gap:8px;background:#23201d;color:#fff;padding:10px 12px;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+#instBar[hidden]{display:none}
+#instBar span{flex:1;min-width:0}
+#instBar button{border:0;border-radius:8px;font:inherit;cursor:pointer;padding:7px 14px}
+#instBar [data-inst]{background:#e8803a;color:#fff;font-weight:700}
+#instBar [data-x]{background:transparent;color:#bbb;padding:7px 8px}
+@media (min-width:900px){#instBar{left:auto;right:24px;max-width:420px}}
 #toast.act{pointer-events:auto}
 #toast button{border:0;background:none;color:#ffc89c;font-weight:700;cursor:pointer;padding:4px 6px}
 
@@ -461,6 +468,12 @@ textarea{resize:vertical;min-height:70px}
       <div class="imgbox" style="margin-top:14px"><img id="signImg" alt=""><div><button class="btn sm" id="bSign" type="button">تغییر امضا / مهر</button> <button class="btn sm del" id="bSignX" type="button">حذف</button></div></div>
       <input type="file" id="logoFile" accept="image/*" hidden><input type="file" id="signFile" accept="image/*" hidden>
       <p class="hint" style="margin-top:14px">اطلاعات فقط داخل همین مرورگر ذخیره می‌شود. برای امن بودن، گاهی از تاریخچه «پشتیبان‌گیری» کنید. اگر فایل را با مرورگر دیگر یا کامپیوتر دیگر باز کنید، تاریخچه جدا خواهد بود؛ با «بازیابی از فایل» منتقلش کنید.</p>
+    </div>
+    <div class="card" id="pwaCard">
+      <h3>نصب روی گوشی</h3>
+      <button class="btn pri" id="bInstall" type="button" hidden>نصب فاکتورساز</button>
+      <ul id="pwaDiag" class="hint" style="margin:10px 0 0;padding-inline-start:18px;line-height:2"></ul>
+      <p class="hint" id="pwaHelp" style="margin-top:8px"></p>
     </div>
   </div>
 </section>
@@ -1029,10 +1042,48 @@ if(db.draft&&db.draft.items){cur=Object.assign({auto:false,dirty:true},db.draft)
 if(cur.auto)cur.no=String(db.settings.nextNo);
 fillForm();renderHist();
 </script>
+<div id="instBar" hidden><span>فاکتورساز را روی گوشی نصب کنید</span><button type="button" data-inst>نصب</button><button type="button" data-x aria-label="بستن">✕</button></div>
 <script>
-/* PWA: register the service worker only when served over http(s); opening the file directly still works as before. */
-if('serviceWorker' in navigator && /^https?:$/.test(location.protocol))
-  addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+/* PWA: service worker + install button + diagnostics. Only active over http(s); the local file works as before. */
+(()=>{
+  const web=/^https?:$/.test(location.protocol);
+  const standalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+  let prompt=null,swState='—',swErr='';
+  const bar=document.getElementById('instBar'),btn=document.getElementById('bInstall');
+  function diag(){
+    const ua=navigator.userAgent,chrome=/Chrome\/\d/.test(ua)&&!/EdgA|SamsungBrowser|OPR|YaBrowser|Firefox|FxiOS/.test(ua);
+    const inApp=/; wv\)|Telegram|Instagram|FBAN|FBAV|WhatsApp|Line\//.test(ua);
+    const rows=[
+      ['آدرس امن (HTTPS)',location.protocol==='https:'||location.hostname==='localhost'],
+      ['service worker فعال',swState==='active',swErr],
+      ['مرورگر کروم',chrome,inApp?'داخل مرورگر داخلی یک برنامهٔ دیگر باز شده':''],
+      ['آمادهٔ نصب',!!prompt||standalone(),standalone()?'برنامه نصب‌شده اجرا شده':''],
+    ];
+    const ul=document.getElementById('pwaDiag');if(!ul)return;
+    ul.innerHTML=rows.map(([t,ok,n])=>'<li>'+(ok?'✅ ':'❌ ')+t+(n?' — '+n:'')+'</li>').join('');
+    let h='';
+    if(standalone())h='برنامه نصب شده و همین الان به‌صورت برنامهٔ مستقل اجرا شده است.';
+    else if(!web)h='این فایل مستقیم باز شده؛ برای نصب، آدرس آنلاین برنامه را در کروم باز کنید.';
+    else if(inApp)h='صفحه داخل تلگرام/اینستاگرام یا برنامهٔ دیگری باز شده. از منوی همان صفحه «Open in Chrome» را بزنید.';
+    else if(!chrome)h='برای نصب، آدرس را در Google Chrome باز کنید.';
+    else if(!prompt)h='اگر دکمهٔ نصب ظاهر نشد: از منوی ⋮ کروم «Add to Home screen / افزودن به صفحهٔ اصلی» را بزنید. اگر کروم فقط «میان‌بر» ساخت، احتمالاً سرویس‌های گوگل (Play Services) روی گوشی در دسترس نیست؛ میان‌بر هم به همین شکل آفلاین کار می‌کند.';
+    document.getElementById('pwaHelp').textContent=h;
+    btn.hidden=!prompt;
+  }
+  addEventListener('beforeinstallprompt',e=>{e.preventDefault();prompt=e;diag();
+    try{if(!localStorage.getItem('instBarX'))bar.hidden=false}catch(_){bar.hidden=false}});
+  async function install(){if(!prompt)return;prompt.prompt();const r=await prompt.userChoice.catch(()=>({}));prompt=null;bar.hidden=true;diag();
+    if(r&&r.outcome==='accepted'&&window.toast)toast('فاکتورساز نصب شد')}
+  btn.onclick=install;bar.querySelector('[data-inst]').onclick=install;
+  bar.querySelector('[data-x]').onclick=()=>{bar.hidden=true;try{localStorage.setItem('instBarX','1')}catch(_){}};
+  addEventListener('appinstalled',()=>{prompt=null;bar.hidden=true;diag()});
+  if(web&&'serviceWorker' in navigator){
+    addEventListener('load',()=>navigator.serviceWorker.register('sw.js')
+      .then(r=>navigator.serviceWorker.ready).then(()=>{swState='active';diag()})
+      .catch(e=>{swState='error';swErr=String(e&&e.message||e).slice(0,80);diag()}));
+  }else if(web){swErr='مرورگر پشتیبانی نمی‌کند'}
+  addEventListener('load',diag);
+})();
 </script>
 </body>
 </html>
