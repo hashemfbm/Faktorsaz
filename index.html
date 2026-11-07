@@ -27,6 +27,10 @@ input,.paper,.sum span,.h .amt,.tb-sum{font-variant-numeric:tabular-nums}
 :focus-visible{outline:2px solid var(--acc-d);outline-offset:2px}
 .top{position:sticky;top:0;z-index:10;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:16px;padding:0 20px;height:54px}
 .brand{font-weight:800;font-size:13px;color:var(--acc-d);white-space:nowrap;order:3;margin-inline-start:auto;opacity:.9}
+.back{flex:none;display:grid;place-items:center;width:40px;height:40px;margin-inline-start:-8px;border:0;border-radius:50%;background:none;color:var(--ink);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.back:hover,.back:active{background:#f1ece5}
+.back svg{width:24px;height:24px}
+.back[hidden]{display:none}
 .top-title{margin:0;font-size:19px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .chip{font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;background:#f1ece5;color:var(--mute);white-space:nowrap}
 .diag{list-style:none;margin:10px 0 0;padding:0;line-height:2.1}
@@ -206,21 +210,22 @@ textarea{resize:vertical;min-height:70px}
   .h{flex-direction:column;align-items:stretch;gap:4px;padding:6px 6px 10px}
   .h .acts{justify-content:flex-start;padding-inline:6px}
   .h .acts .btn{min-height:40px;padding-inline:16px}
-  main{padding:12px 12px calc(96px + 66px + env(safe-area-inset-bottom))}
-  body:not(.on-edit) main{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+  main{padding:12px 12px calc(84px + env(safe-area-inset-bottom))}
+  body.on-edit main{padding-bottom:calc(92px + env(safe-area-inset-bottom))}
+  body.on-edit .bnav{display:none}
   #hSearch{flex:1 1 160px;min-width:0}
   .top{padding:0 10px}
   body{font-size:16px}
   input[type=text],input:not([type]),textarea,select{font-size:16px;min-height:44px}
   .btn{min-height:44px}
-  .toolbar{position:fixed;inset-inline:0;bottom:calc(66px + env(safe-area-inset-bottom));margin:0;background:#fff;border-top:1px solid var(--line);padding:8px 10px;z-index:20;flex-wrap:nowrap}
+  .toolbar{position:fixed;inset-inline:0;bottom:0;margin:0;background:#fff;border-top:1px solid var(--line);padding:8px 10px calc(8px + env(safe-area-inset-bottom));z-index:20;flex-wrap:nowrap}
   .toolbar .status,.toolbar #bNew{display:none}
   .tb-sum{display:block;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
   .toolbar .btn,.toolbar .menuwrap{flex:none}
   .toolbar .btn{padding:8px 10px}
   .toolbar .lbl{display:none}
   .menu{top:auto;bottom:calc(100% + 6px);left:0;right:auto}
-  #toast{bottom:calc(150px + env(safe-area-inset-bottom))}
+  #toast{bottom:calc(100px + env(safe-area-inset-bottom))}
   #instBar{bottom:calc(78px + env(safe-area-inset-bottom))}
 }
 @media print{
@@ -394,6 +399,7 @@ textarea{resize:vertical;min-height:70px}
 <body>
 <header class="top">
   <div class="brand">فاکتورساز</div>
+  <button type="button" class="back" id="bBack" hidden aria-label="بازگشت به فهرست فاکتورها"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
   <h1 class="top-title" id="topSub">فاکتورها</h1>
   <span class="chip" id="topStatus" hidden></span>
 </header>
@@ -1049,8 +1055,21 @@ function startNew(){
   if(cur.dirty&&!confirm('تغییرات ذخیره‌نشده از بین می‌رود. ادامه؟'))return;
   newInvoice();db.draft=null;fillForm();showTab('edit');scrollTo(0,0);
 }
+function leaveEdit(){
+  if(cur.dirty&&cur.id&&!confirm('تغییرات این فاکتور ذخیره نشده است. بدون ذخیره خارج می‌شوید؟'))return false;
+  if(cur.dirty&&cur.id){const o=db.invoices.find(x=>x.id===cur.id);if(o)cur=Object.assign(JSON.parse(JSON.stringify(o)),{auto:false,dirty:false});db.draft=null;persist();fillForm()}
+  else if(cur.dirty&&calc(cur).rows.length)toast('پیش‌نویس نگه داشته شد؛ با «فاکتور جدید» ادامه دهید');
+  showTab('hist');scrollTo(0,0);return true;
+}
+function goBack(){if(history.state&&history.state.fz==='edit')history.back();else leaveEdit()}
+addEventListener('popstate',()=>{
+  if($('#tab-edit').classList.contains('on')&&!leaveEdit())history.pushState({fz:'edit'},'');
+});
 function showTab(t){
+  if(t==='edit'&&!(history.state&&history.state.fz==='edit'))try{history.pushState({fz:'edit'},'')}catch(_){}
+  if(t!=='edit'&&history.state&&history.state.fz==='edit')try{history.back()}catch(_){}
   $$('.tab').forEach(s=>s.classList.toggle('on',s.id==='tab-'+t));
+  $('#bBack').hidden=t!=='edit';
   document.body.classList.toggle('on-edit',t==='edit');
   if(t==='edit')requestAnimationFrame(fit);
   $('#toolbar').style.display=t==='edit'?'':'none';
@@ -1061,6 +1080,7 @@ function showTab(t){
 $('#bnav').addEventListener('click',e=>{const b=e.target.closest('[data-nav]');if(!b)return;
   if(b.dataset.nav==='new')startNew();else{showTab(b.dataset.nav);scrollTo(0,0)}});
 $('#bNewList').onclick=startNew;
+$('#bBack').onclick=goBack;
 
 /* ---------- همگام‌سازی چند تب ---------- */
 addEventListener('storage',e=>{
@@ -1153,7 +1173,9 @@ $$('#seg button').forEach(b=>b.onclick=()=>{
 /* ---------- شروع ---------- */
 if(db.draft&&db.draft.items){cur=Object.assign({auto:false,dirty:true},db.draft)}else newInvoice();
 if(cur.auto)cur.no=String(db.settings.nextNo);
-fillForm();renderHist();showTab('hist');
+fillForm();renderHist();
+try{if(history.state&&history.state.fz)history.replaceState(null,'')}catch(_){}
+showTab('hist');
 </script>
 <div id="instBar" hidden><span>فاکتورساز را روی گوشی نصب کنید</span><button type="button" data-inst>نصب</button><button type="button" data-x aria-label="بستن">✕</button></div>
 <script>
