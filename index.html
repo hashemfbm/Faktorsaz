@@ -14,8 +14,28 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <title>فاکتورساز</title>
 <style id="appCss">
-:root{--bg:#f4f1ec;--surface:#fff;--ink:#23201d;--mute:#6b635b;--line:#e2dbd2;--acc:#e8803a;--acc-d:#b85a18;--acc-dd:#9c4a10;--acc-l:#fdeede;--ok:#2a7d50;--bad:#b83227;--r:8px}
+:root{--bg:#f4f1ec;--surface:#fff;--ink:#23201d;--mute:#6b635b;--line:#e2dbd2;--acc:#e8803a;--acc-d:#ad5414;--acc-dd:#9c4a10;--acc-l:#fdeede;--ok:#246e46;--bad:#b83227;--r:8px}
 *{box-sizing:border-box}
+.ferr{color:var(--bad);font-size:13px;font-weight:600;margin-top:6px}
+.invalid{border-color:var(--bad)!important;box-shadow:0 0 0 3px rgba(185,28,28,.12)!important}
+.btn,.chips button,.seg button,.seg2 button,.bnav button,.back,.icobtn,.h-main,.sx summary,.rm{transition:background-color .12s ease,border-color .12s ease,filter .12s ease}
+.btn:active,.chips button:active,.seg2 button:active,.h-main:active,.sx summary:active,.back:active{background-color:#efe8df}
+.btn.pri:active{filter:brightness(.9)}
+.sw{gap:2px!important}
+.sw button{width:44px!important;height:44px!important;padding:7px!important;border:0!important;background-clip:content-box!important;box-shadow:none!important;border-radius:50%}
+.sw button.on{box-shadow:inset 0 0 0 2.5px var(--ink)!important}
+.sw input[type=color]{width:44px;height:44px}
+.chk{min-height:44px}
+.chips button{min-height:44px}
+.seg2 button{min-height:44px}
+.back{width:44px!important;height:44px!important}
+.icobtn{width:44px!important;top:0!important;bottom:0!important}
+.bnav #hcount{font-size:12px!important}
+.tb-sum small,.tb-sum i{font-size:12px!important}
+@media (pointer:coarse),(max-width:900px){.btn,.btn.sm,.h .acts .btn{min-height:44px!important}.rm{min-height:44px;min-width:44px}#bMenu{min-width:44px}}
+.seg2 button{min-height:44px!important}
+.sw input[type=color]#swCustom{width:44px!important;height:44px!important}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important}}
 #splash{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;background:radial-gradient(120% 90% at 50% 30%,#f29a55 0%,#e8803a 45%,#c9601f 100%);color:#fff;transition:opacity .45s ease,visibility .45s;padding-bottom:env(safe-area-inset-bottom)}
 #splash.out{opacity:0;visibility:hidden}
 #splash.out .sp-in{transform:scale(1.06)}
@@ -484,7 +504,7 @@ textarea{resize:vertical;min-height:70px}
 <main>
 <!-- ============ فاکتور ============ -->
 <section id="tab-edit" class="tab">
- <div class="seg" id="seg" role="tablist"><button data-v="form" class="on" role="tab">فرم فاکتور</button><button data-v="prev" role="tab">پیش‌نمایش</button></div>
+ <div class="seg" id="seg" role="tablist"><button type="button" data-v="form" class="on" role="tab" aria-selected="true">فرم فاکتور</button><button type="button" data-v="prev" role="tab" aria-selected="false">پیش‌نمایش</button></div>
  <div class="toolbar" id="toolbar">
    <span class="status" id="status" role="status"></span>
    <span class="tb-sum"><small>قابل پرداخت</small><b class="num"><span id="tb_pay"></span> <i>ریال</i></b></span>
@@ -567,7 +587,7 @@ textarea{resize:vertical;min-height:70px}
 <!-- ============ تاریخچه ============ -->
 <section id="tab-hist" class="tab on">
   <div class="hist-tools">
-    <input id="hSearch" placeholder="جستجو: شماره، نام خریدار، تاریخ…" autocomplete="off">
+    <input id="hSearch" type="search" aria-label="جستجوی فاکتورها" placeholder="جستجو: شماره، نام خریدار، تاریخ…" autocomplete="off" enterkeyhint="search">
     <button class="btn pri hl-new" id="bNewList" type="button"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>فاکتور جدید</button>
   </div>
   <div class="banner" id="bkBanner" hidden></div>
@@ -653,7 +673,7 @@ textarea{resize:vertical;min-height:70px}
   </div>
 </section>
 </main>
-<div id="toast"></div>
+<div id="toast" role="status" aria-live="polite"></div>
 
 <script>
 "use strict";
@@ -666,10 +686,17 @@ const norm=s=>String(s==null?'':s).replace(/[۰-۹]/g,d=>d.charCodeAt(0)-1776).r
 const num=v=>{const n=Number(norm(v).replace(/[,\s]/g,''));return isFinite(n)?n:0};
 const fmt=n=>{n=Math.round(n);return (n<0?'-':'')+Math.abs(n).toLocaleString('en-US')};
 const fmtIn=v=>{const c=norm(v).replace(/[^\d.]/g,'');if(c==='')return'';const [i,d]=c.split('.');return i.replace(/\B(?=(\d{3})+(?!\d))/g,',')+(d!==undefined?'.'+d:'')};
+let lblN=0;
+function a11yLink(root){
+  (root||document).querySelectorAll('.f').forEach(f=>{const l=f.querySelector(':scope>label'),c=f.querySelector(':scope>input,:scope>select,:scope>textarea,:scope>.dwrap>input');
+    if(l&&c&&!l.htmlFor&&!(c.labels&&c.labels.length)){if(!c.id)c.id='fx'+(++lblN);l.htmlFor=c.id}});
+  (root||document).querySelectorAll('button svg,a svg,.ci svg,.empty-ic,.sx-chev').forEach(v=>v.setAttribute('aria-hidden','true'));
+}
+function pressSync(sel){$$(sel).forEach(b=>b.setAttribute('aria-pressed',String(b.classList.contains('on'))))}
 function toast(m,act){
   const t=$('#toast');t.textContent=m;t.classList.toggle('act',!!act);
   if(act){const b=document.createElement('button');b.textContent=act.label;b.onclick=()=>{t.classList.remove('on');act.fn()};t.appendChild(b)}
-  t.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove('on'),act?7000:2200)
+  t.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove('on'),act?7000:3500)
 }
 /* ---------- تقویم شمسی (الگوریتم jalaali، بدون کتابخانه) ---------- */
 const div=(a,b)=>Math.trunc(a/b),mod=(a,b)=>a-div(a,b)*b;
@@ -904,7 +931,7 @@ function renderItems(){
     </div>
     <div class="tot">جمع ردیف: <b class="num" data-t>${fmt(num(it.q)*num(it.p))}</b> ریال</div>
   </div>`).join('')+'<datalist id="units"><option>عدد</option><option>گرم</option><option>کیلوگرم</option><option>مثقال</option><option>دلار</option><option>بسته</option><option>ساعت</option><option>خدمت</option></datalist><datalist id="descs"></datalist>';
-  refreshLists();
+  refreshLists();a11yLink($('#items'));
 }
 function refreshLists(){
   const cm=new Map(),ds=new Set();
@@ -942,9 +969,19 @@ $('#f_sign').addEventListener('change',e=>{cur.showSign=e.target.checked;touch()
 function snapshot(inv){
   return {id:inv.id,no:inv.no,date:inv.date,buyer:inv.buyer,nid:inv.nid,items:inv.items.map(x=>({d:x.d,q:x.q,u:x.u,p:x.p})),discount:inv.discount,notes:inv.notes,showSign:inv.showSign,showWords:!!inv.showWords,tpl:inv.tpl,size:inv.size,accent:inv.accent,bk:inv.bk?Object.assign({},inv.bk):null,createdAt:inv.createdAt,updatedAt:inv.updatedAt,s:inv.s};
 }
+function fieldErr(el,msg){
+  if(!el)return;if(document.body.classList.contains('mv-prev'))$('#seg [data-v=form]').click();
+  const f=el.closest('.f')||el.parentElement;f.querySelector('.ferr')?.remove();
+  const m=document.createElement('div');m.className='ferr';m.id='err-'+(el.id||'x');m.textContent=msg;f.appendChild(m);
+  el.setAttribute('aria-invalid','true');el.setAttribute('aria-describedby',m.id);el.classList.add('invalid');
+  el.scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});el.focus({preventScroll:true});
+  const clr=()=>{m.remove();el.removeAttribute('aria-invalid');el.removeAttribute('aria-describedby');el.classList.remove('invalid');el.removeEventListener('input',clr)};
+  el.addEventListener('input',clr);
+}
+function needRows(){if(calc(cur).rows.length)return true;fieldErr($('#items .item input[data-k=d]'),'حداقل یک ردیف کالا/خدمت با شرح، مقدار یا مبلغ وارد کنید.');toast('حداقل یک ردیف کالا/خدمت وارد کنید');return false}
 function saveCur(){
   if(cur.auto)cur.no=String(db.settings.nextNo);
-  if(!String(cur.no).trim()){toast('شماره فاکتور خالی است');return false}
+  if(!String(cur.no).trim()){fieldErr($('#f_no'),'شمارهٔ فاکتور را وارد کنید یا «خودکار» را روشن کنید.');toast('شماره فاکتور خالی است');return false}
   const now=Date.now();
   if(!cur.id){cur.id=uid();cur.createdAt=now;cur.s=Object.fromEntries(SELLER_KEYS.map(k=>[k,db.settings[k]]))}
   cur.updatedAt=now;
@@ -958,7 +995,7 @@ function saveCur(){
   setStatus();renderHist();checkNo();
   return true;
 }
-$('#bSave').onclick=()=>{if(saveCur())toast('فاکتور ذخیره شد')};
+$('#bSave').onclick=()=>{if(needRows()&&saveCur())toast('فاکتور ذخیره شد')};
 $('#bNew').onclick=()=>startNew();
 
 /* ---------- خروجی ---------- */
@@ -1217,7 +1254,7 @@ const TPLS=[['modern','مدرن'],['exec','رسمی'],['min','مینیمال'],[
 function renderTpls(){
   const st=db.settings,look=Object.assign({},cur,{tpl:st.tpl,size:st.size,accent:st.accent}),pg=pageOf(look),TW=96,sc=TW/pg.w,sel=look.tpl||'classic',ac=accOf(look);
   $('#tplList').innerHTML=TPLS.map(([k,n])=>`<div class="tpl${sel===k?' on':''}" role="radio" tabindex="0" aria-checked="${sel===k}" data-tpl="${k}"><span class="th" style="width:${TW}px;height:${Math.round(pg.h*sc)}px"><span class="thin" style="transform:scale(${sc})">${paperHTML(look,k)}</span></span><span class="tn">${n}</span></div>`).join('');
-  $$('#sizeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.size===(look.size||'a4')));
+  $$('#sizeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.size===(look.size||'a4')));pressSync('#sizeSeg button');
   const custom=!ACCENTS.some(a=>a[0]===ac);
   $('#swatches').innerHTML=ACCENTS.map(([c,n])=>`<button type="button" class="${c===ac?'on':''}" style="background:${c}" data-ac="${c}" title="${n}" aria-label="${n}"></button>`).join('')+`<input type="color" id="swCustom" value="${ac}" aria-label="رنگ دلخواه"${custom?' class="on"':''}>`;
 }
@@ -1226,8 +1263,8 @@ function setLook(k,v){db.settings[k]=v;persist();sxSum();if(!cur.id&&!cur.dirty)
 function renderInvLook(){
   const tp=cur.tpl||'classic',ac=accOf(cur);
   $('#iv_tpl').innerHTML=TPLS.map(([k,n])=>`<button type="button" role="radio" aria-checked="${tp===k}" class="${tp===k?'on':''}" data-tpl="${k}">${n}</button>`).join('');
-  $$('#iv_size button').forEach(b=>b.classList.toggle('on',b.dataset.size===(cur.size||'a4')));
-  $('#iv_sw').innerHTML=ACCENTS.map(([c,n])=>`<button type="button" class="${c===ac?'on':''}" style="background:${c}" data-ac="${c}" title="${n}" aria-label="${n}"></button>`).join('');
+  $$('#iv_size button').forEach(b=>b.classList.toggle('on',b.dataset.size===(cur.size||'a4')));pressSync('#iv_size button');
+  $('#iv_sw').innerHTML=ACCENTS.map(([c,n])=>`<button type="button" class="${c===ac?'on':''}" style="background:${c}" data-ac="${c}" title="${n}" aria-label="${n}" aria-pressed="${c===ac}"></button>`).join('');
   $('#iv_refresh').hidden=!cur.id;
   renderBankSelect();
 }
@@ -1328,7 +1365,7 @@ document.addEventListener('keydown',e=>{
 });
 $('#bShare').onclick=async()=>{
   closeMenu();
-  if(!calc(cur).rows.length){toast('حداقل یک ردیف کالا/خدمت وارد کنید');return}
+  if(!needRows())return;
   if(!saveCur())return;
   try{
     toast('در حال آماده‌سازی…');
@@ -1338,10 +1375,10 @@ $('#bShare').onclick=async()=>{
     else toast('این مرورگر ارسال مستقیم را پشتیبانی نمی‌کند؛ از دکمه «عکس» یا «PDF» استفاده کنید')
   }catch(err){if(err&&err.name!=='AbortError'){console.error(err);toast('ارسال با خطا مواجه شد')}}
 };
-$('#bPrint').onclick=()=>{closeMenu();if(!calc(cur).rows.length){toast('حداقل یک ردیف کالا/خدمت وارد کنید');return}if(saveCur()){let ps=$('#pgStyle');if(!ps){ps=document.createElement('style');ps.id='pgStyle';document.head.appendChild(ps)}ps.textContent=`@page{size:${cur.size==='a5'?'A5':'A4'};margin:0}`;setTimeout(()=>window.print(),50)}};
+$('#bPrint').onclick=()=>{closeMenu();if(!needRows())return;if(saveCur()){let ps=$('#pgStyle');if(!ps){ps=document.createElement('style');ps.id='pgStyle';document.head.appendChild(ps)}ps.textContent=`@page{size:${cur.size==='a5'?'A5':'A4'};margin:0}`;setTimeout(()=>window.print(),50)}};
 $$('#seg button').forEach(b=>b.onclick=()=>{
   document.body.classList.toggle('mv-prev',b.dataset.v==='prev');
-  $$('#seg button').forEach(x=>x.classList.toggle('on',x===b));
+  $$('#seg button').forEach(x=>{x.classList.toggle('on',x===b);x.setAttribute('aria-selected',String(x===b))});
   if(b.dataset.v==='prev')requestAnimationFrame(()=>{renderPreview();scrollTo(0,0)});
 });
 
@@ -1351,6 +1388,8 @@ if(cur.auto)cur.no=String(db.settings.nextNo);
 fillForm();renderHist();
 try{if(history.state&&history.state.fz)history.replaceState(null,'')}catch(_){}
 showTab('hist');
+a11yLink();
+try{if(new URLSearchParams(location.search).has('new')){history.replaceState(null,'',location.pathname);startNew()}}catch(_){}
 /* splash: at least ~1.3s so the animation reads, then fade out */
 (()=>{const sp=$('#splash');if(!sp)return;const t0=performance.timeOrigin?Date.now()-performance.now():Date.now();
   const hide=()=>{sp.classList.add('out');setTimeout(()=>sp.remove(),500)};
