@@ -1,5 +1,5 @@
 // فاکتورساز — service worker: offline-first, background refresh.
-const CACHE = 'faktorsaz-v7';
+const CACHE = 'faktorsaz-v8';
 const ASSETS = ['./', './index.html', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png',
   './icons/apple-touch-icon.png', './icons/icon.svg'];

@@ -52,6 +52,22 @@ input,.paper,.sum span,.h .amt,.tb-sum{font-variant-numeric:tabular-nums}
 .back[hidden]{display:none}
 .top-title{margin:0;font-size:19px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .chip{font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;background:#f1ece5;color:var(--mute);white-space:nowrap}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 14px;font:inherit;font-size:14px;cursor:pointer;color:var(--ink)}
+.chips button.on{border-color:var(--acc);background:var(--acc-l);color:var(--acc-dd);font-weight:800}
+.iv-refresh{margin-top:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px;color:var(--mute);background:#faf7f3;border-radius:10px;padding:10px 12px}
+.iv-refresh span{flex:1 1 220px}
+.bk-list{display:flex;flex-direction:column;gap:8px}
+.bk-item{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fff}
+.bk-item.def{border-color:var(--acc);background:var(--acc-l)}
+.bk-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.bk-main b{font-weight:800}
+.bk-main span{font-size:13px;color:var(--mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bk-tag{display:inline-block;font-size:11px;font-weight:700;color:var(--acc-dd);background:#fff;border:1px solid var(--acc);border-radius:999px;padding:0 8px;margin-inline-start:6px;vertical-align:middle}
+.bk-acts{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+@media(max-width:600px){.bk-item{flex-direction:column;align-items:stretch}.bk-main span{white-space:normal;overflow-wrap:anywhere}.bk-acts{justify-content:flex-start}}
+.bk-form{border:1px dashed var(--acc);border-radius:10px;padding:12px;margin-top:10px;background:#fffaf5}
+.bk-empty{color:var(--mute);font-size:14px;padding:6px 0}
 .diag{list-style:none;margin:10px 0 0;padding:0;line-height:2.1}
 .diag li{display:flex;align-items:center;gap:8px}
 .diag li::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--ok);flex:none}
@@ -524,11 +540,21 @@ textarea{resize:vertical;min-height:70px}
         <label class="chk"><input type="checkbox" id="f_sign"> امضای فروشنده</label>
         <label class="chk"><input type="checkbox" id="f_words"> مبلغ به حروف</label>
       </div>
+      <div class="f" style="margin-top:12px"><label for="f_bank">حساب بانکی این فاکتور</label><select id="f_bank"></select></div>
       <div style="margin-top:12px">
         <div class="sum"><span>جمع اقلام</span><span id="s_sub" class="num"></span></div>
         <div class="sum"><span>تخفیف</span><span id="s_disc" class="num"></span></div>
         <div class="sum big"><span>قابل پرداخت (ریال)</span><span id="s_pay" class="num"></span></div>
       </div>
+    </div>
+    <div class="sec" id="secInvLook">
+      <h3>ظاهر این فاکتور</h3>
+      <div class="chips" id="iv_tpl" role="radiogroup" aria-label="قالب این فاکتور"></div>
+      <div class="row look-row" style="margin-top:10px">
+        <div class="f" style="flex:0 0 140px"><label>اندازه کاغذ</label><div class="seg2" id="iv_size"><button type="button" data-size="a4">A4</button><button type="button" data-size="a5">A5</button></div></div>
+        <div class="f"><label>رنگ</label><div class="sw" id="iv_sw"></div></div>
+      </div>
+      <div id="iv_refresh" class="iv-refresh" hidden><span>اگر در تنظیمات نام، آدرس یا تلفن را عوض کرده‌اید، این فاکتور هنوز اطلاعات زمان ساختش را دارد.</span><button class="btn sm" id="bRefreshSeller" type="button">به‌روزرسانی از تنظیمات</button></div>
     </div>
    </div>
   </div>
@@ -566,10 +592,16 @@ textarea{resize:vertical;min-height:70px}
     <details class="card sx" data-sx="bank">
       <summary><span class="sx-h"><b>حساب بانکی</b><span class="sx-s" data-sxs="bank"></span></span><svg class="sx-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg></summary>
       <div class="sx-b">
-      <div class="f"><label>شماره حساب</label><input data-s="acc" class="num"></div>
-      <div class="f" style="margin-top:8px"><label>شماره شبا (بدون IR)</label><input data-s="sheba" class="num"></div>
-      <div class="f" style="margin-top:8px"><label>بانک</label><input data-s="bank"></div>
-      <div class="f" style="margin-top:8px"><label>به نام</label><input data-s="holder"></div>
+      <p class="hint" style="margin:0 0 10px">هر تعداد حساب که لازم دارید اضافه کنید. حساب «پیش‌فرض» روی فاکتورهای جدید می‌آید و در صفحهٔ ساخت فاکتور می‌توانید حساب دیگری انتخاب کنید.</p>
+      <div class="bk-list" id="bankList"></div>
+      <div class="bk-form" id="bankForm" hidden>
+        <div class="f"><label for="b_bank">نام بانک</label><input id="b_bank" placeholder="مثلاً: بانک ملی"></div>
+        <div class="f" style="margin-top:8px"><label for="b_acc">شماره حساب</label><input id="b_acc" class="num" inputmode="numeric"></div>
+        <div class="f" style="margin-top:8px"><label for="b_sheba">شماره شبا (بدون IR)</label><input id="b_sheba" class="num" inputmode="numeric"></div>
+        <div class="f" style="margin-top:8px"><label for="b_holder">به نام</label><input id="b_holder"></div>
+        <div style="display:flex;gap:8px;margin-top:12px"><button class="btn pri" id="bBankSave" type="button">ذخیرهٔ حساب</button><button class="btn" id="bBankCancel" type="button">انصراف</button></div>
+      </div>
+      <button class="btn" id="bBankAdd" type="button" style="margin-top:10px">+ افزودن حساب بانکی</button>
       </div>
     </details>
     <details class="card sx" data-sx="img">
@@ -584,7 +616,7 @@ textarea{resize:vertical;min-height:70px}
     <details class="card sx" id="secLook" data-sx="look">
       <summary><span class="sx-h"><b>ظاهر فاکتور</b><span class="sx-s" data-sxs="look"></span></span><svg class="sx-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg></summary>
       <div class="sx-b">
-      <p class="hint" style="margin:-4px 0 12px">قالب، اندازهٔ کاغذ و رنگ فاکتورهای جدید. فاکتورهای ذخیره‌شده ظاهر خودشان را نگه می‌دارند.</p>
+      <p class="hint" style="margin:-4px 0 12px">پیش‌فرض فاکتورهای جدید. ظاهر هر فاکتور را جداگانه هم می‌توانید در صفحهٔ همان فاکتور (بخش «ظاهر این فاکتور») عوض کنید.</p>
       <div class="tpls" id="tplList" role="radiogroup" aria-label="قالب فاکتور"></div>
       <div class="row look-row">
         <div class="f" style="flex:0 0 140px"><label>اندازه کاغذ</label><div class="seg2" id="sizeSeg"><button type="button" data-size="a4">A4</button><button type="button" data-size="a5">A5</button></div></div>
@@ -694,7 +726,7 @@ const DEF={
   brand:'بیتمارت افیکس',sub:'خرید و فروش ارز دیجیتال',title:'فاکتور فروش کالا و خدمات',econ:'',
   acc:'',sheba:'',bank:'بانک ملی',holder:'',
   notes:'* وجوه واریزی به حساب حتما باید از حساب بانکی به نام خریدار واریز گردد.\n*اعتبار قیمت تا پایان وقت اداری امروز می باشد',
-  addr:'',phone:'',
+  addr:'',phone:'',banks:[],defBank:'',banksV:0,
   defDesc:'ارز دیجیتال تتر USDT',defUnit:'عدد',nextNo:1,defWords:false,tpl:'modern',size:'a4',accent:'#e8803a',
   logo:'data:image/jpeg;base64,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',sign:''
 };
@@ -704,14 +736,28 @@ function load(){
   try{const r=localStorage.getItem(LS);if(r){const d=JSON.parse(r);d.settings=Object.assign({},DEF,d.settings||{});d.invoices=d.invoices||[];d.meta=d.meta||{bkAt:0,bkN:0};return d}}catch(e){memOnly=true}
   return {settings:Object.assign({},DEF),invoices:[],draft:null,meta:{bkAt:0,bkN:0}};
 }
+/* ---------- حساب‌های بانکی ---------- */
+const BK_F=['bank','acc','sheba','holder'];
+function cleanBank(b){if(!b||typeof b!=='object')return null;const o={id:typeof b.id==='string'&&/^[\w-]{1,40}$/.test(b.id)?b.id:uid()};BK_F.forEach(k=>o[k]=String(b[k]==null?'':b[k]).slice(0,120).trim());return o}
+function migrateBanks(st){
+  if(!Array.isArray(st.banks))st.banks=[];
+  if(!st.banksV){if(!st.banks.length&&(st.acc||st.sheba)){const b=cleanBank({bank:st.bank,acc:st.acc,sheba:st.sheba,holder:st.holder});st.banks.push(b);st.defBank=b.id}st.banksV=1}
+  st.banks=st.banks.map(cleanBank).filter(Boolean).slice(0,30);
+  if(!st.banks.some(b=>b.id===st.defBank))st.defBank=st.banks[0]?st.banks[0].id:'';
+}
+function defBank(){const st=db.settings;return st.banks.find(b=>b.id===st.defBank)||null}
+function syncLegacyBank(){const d=defBank(),st=db.settings;BK_F.forEach(k=>st[k]=d?d[k]:'')}
+function bankLabel(b){if(!b)return '';const t=b.acc?'حساب منتهی به '+b.acc.slice(-4):b.sheba?'شبا منتهی به '+b.sheba.slice(-4):'';return [b.bank||'حساب بانکی',t,b.holder].filter(Boolean).join(' · ')}
+function sameBank(a,b){return !!a&&!!b&&BK_F.every(k=>(a[k]||'')===(b[k]||''))}
 function persist(){try{localStorage.setItem(LS,JSON.stringify(db))}catch(e){if(!memOnly){memOnly=true;toast('ذخیره در مرورگر ممکن نیست؛ از پشتیبان‌گیری استفاده کنید')}}}
-db=load();
+db=load();migrateBanks(db.settings);syncLegacyBank();
 
 /* ---------- فاکتور جاری ---------- */
 let cur=null;
 function blankItem(first){return {d:first?db.settings.defDesc:'',q:'',u:db.settings.defUnit,p:''}}
 function newInvoice(){
-  cur={id:null,no:String(db.settings.nextNo),auto:true,date:jalaliToday(),buyer:'',nid:'',items:[blankItem(true)],discount:'',notes:db.settings.notes,showSign:true,showWords:!!db.settings.defWords,tpl:db.settings.tpl,size:db.settings.size,accent:db.settings.accent,dirty:false};
+  cur={id:null,no:String(db.settings.nextNo),auto:true,date:jalaliToday(),buyer:'',nid:'',items:[blankItem(true)],discount:'',notes:db.settings.notes,showSign:true,showWords:!!db.settings.defWords,tpl:db.settings.tpl,size:db.settings.size,accent:db.settings.accent,dirty:false};;
+  {const d=defBank();cur.bk=d?Object.assign({},d):null}
 }
 function calc(inv){
   let sub=0;
@@ -726,6 +772,7 @@ const pageOf=inv=>PAGE[inv.size]||PAGE.a4;
 const ACCENTS=[['#e8803a','نارنجی'],['#1e4e8c','آبی'],['#0f766e','سبز'],['#8b1e3f','شرابی'],['#374151','گرافیت']];
 const accOf=inv=>/^#[0-9a-f]{6}$/i.test(inv.accent||'')?inv.accent:'#e8803a';
 function mixHex(h,t,a){const q=x=>[1,3,5].map(i=>parseInt(x.slice(i,i+2),16)),A=q(h),B=q(t);return '#'+A.map((v,i)=>Math.round(v*(1-a)+B[i]*a).toString(16).padStart(2,'0')).join('')}
+function sellerOf(inv){const s=Object.assign({},db.settings,inv.s||{});if(inv.bk&&typeof inv.bk==='object')BK_F.forEach(k=>s[k]=String(inv.bk[k]||''));return s}
 function contactHTML(s,cls){
   const a=String(s.addr||'').trim(),p=String(s.phone||'').trim();if(!a&&!p)return '';
   const pin='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>';
@@ -737,7 +784,7 @@ function paperHTML(inv,tpl){
   return tpl==='classic'?paperClassic(inv):paperModern(inv,tpl);
 }
 function paperModern(inv,tpl){
-  const st=db.settings,s=Object.assign({},st,inv.s||{}),c=calc(inv),pg=pageOf(inv),ac=accOf(inv);
+  const st=db.settings,s=sellerOf(inv),c=calc(inv),pg=pageOf(inv),ac=accOf(inv);
   const vars=`--w:${pg.w}px;--h:${pg.h}px;--fs:${pg.fs}px;--ac:${ac};--ad:${mixHex(ac,'#000000',.2)};--ax:${mixHex(ac,'#0e1220',.82)};--al:${mixHex(ac,'#ffffff',.9)}`;
   const rows=c.rows.length?c.rows:[{d:'',q:'',u:'',p:'',t:0,empty:true}];
   const body=rows.map((r,i)=>`<tr class="${i%2?'z':''}"><td class="n">${i+1}</td><td class="d">${esc(r.d)}</td><td class="n">${r.empty?'':fmtIn(r.q)}</td><td>${esc(r.u)}</td><td class="n">${r.empty?'':fmtIn(r.p)}</td><td class="n">${r.empty?'':fmt(r.t)}</td></tr>`).join('');
@@ -757,7 +804,7 @@ function paperModern(inv,tpl){
     </div>
     <table class="p2-table"><thead><tr><th style="width:3.2em">ردیف</th><th>شرح</th><th style="width:6em">مقدار</th><th style="width:4em">واحد</th><th style="width:8.5em">مبلغ (ریال)</th><th style="width:9.5em">جمع (ریال)</th></tr></thead><tbody>${body}</tbody></table>
     <div class="p2-lower">
-      <div class="p2-pay"><h4>اطلاعات پرداخت</h4>${bank}</div>
+      ${bank?`<div class="p2-pay"><h4>اطلاعات پرداخت</h4>${bank}</div>`:'<div></div>'}
       <div>
         <div class="p2-totals">
           ${rows.length>1||c.disc?`<div class="r"><span>جمع اقلام</span><b>${fmt(c.sub)}</b></div>`:''}
@@ -777,7 +824,7 @@ function paperModern(inv,tpl){
   </div>`;
 }
 function paperClassic(inv){
-  const st=db.settings, s=Object.assign({},st,inv.s||{}), c=calc(inv), pg=pageOf(inv);
+  const st=db.settings, s=sellerOf(inv), c=calc(inv), pg=pageOf(inv);
   const rows=c.rows.length?c.rows:[{d:'',q:'',u:'',p:'',t:0,empty:true}];
   const body=rows.map((r,i)=>`<tr><td class="n">${i+1}</td><td class="r">${esc(r.d)}</td><td class="n">${r.empty?'':fmtIn(r.q)}</td><td>${esc(r.u)}</td><td class="n">${r.empty?'':fmtIn(r.p)}</td><td class="n">${r.empty?'':fmt(r.t)}</td></tr>`).join('');
   const notes=String(inv.notes||'').split('\n').filter(x=>x.trim()).map(x=>`<div>${esc(x)}</div>`).join('');
@@ -801,7 +848,7 @@ function paperClassic(inv){
     <tr class="tot"><td colspan="5" class="lab">مبلغ قابل پرداخت (ریال)</td><td class="n">${fmt(c.pay)}</td></tr>
     ${inv.showWords?`<tr><td colspan="6" class="words">مبلغ به حروف: ${words(c.pay)} ریال</td></tr>`:''}</tbody>
   </table>
-  <div class="p-bottom"><table class="p-bank">${bank}</table></div>
+  <div class="p-bottom">${bank?`<table class="p-bank">${bank}</table>`:''}</div>
   ${notes?`<div class="p-notes"><div>توضیحات :</div>${notes}</div>`:''}
   <div class="p-sign"><div class="c">خریدار</div><div class="c">فروشنده${inv.showSign&&st.sign?`<img src="${esc(st.sign)}" alt=""/>`:''}</div></div>
   ${contactHTML(s,'p-contact')}
@@ -844,6 +891,7 @@ function fillForm(){
   $('#f_date').value=cur.date;$('#f_buyer').value=cur.buyer;$('#f_nid').value=cur.nid;
   $('#f_disc').value=fmtIn(cur.discount);$('#f_notes').value=cur.notes;$('#f_sign').checked=!!cur.showSign;$('#f_words').checked=!!cur.showWords;
   renderItems();renderPreview();renderSums();setStatus();renderTpls();
+  renderInvLook();
 }
 function renderItems(){
   $('#items').innerHTML=cur.items.map((it,i)=>`<div class="item" data-i="${i}">
@@ -892,7 +940,7 @@ $('#f_sign').addEventListener('change',e=>{cur.showSign=e.target.checked;touch()
 
 /* ---------- ذخیره ---------- */
 function snapshot(inv){
-  return {id:inv.id,no:inv.no,date:inv.date,buyer:inv.buyer,nid:inv.nid,items:inv.items.map(x=>({d:x.d,q:x.q,u:x.u,p:x.p})),discount:inv.discount,notes:inv.notes,showSign:inv.showSign,showWords:!!inv.showWords,tpl:inv.tpl,size:inv.size,accent:inv.accent,createdAt:inv.createdAt,updatedAt:inv.updatedAt,s:inv.s};
+  return {id:inv.id,no:inv.no,date:inv.date,buyer:inv.buyer,nid:inv.nid,items:inv.items.map(x=>({d:x.d,q:x.q,u:x.u,p:x.p})),discount:inv.discount,notes:inv.notes,showSign:inv.showSign,showWords:!!inv.showWords,tpl:inv.tpl,size:inv.size,accent:inv.accent,bk:inv.bk?Object.assign({},inv.bk):null,createdAt:inv.createdAt,updatedAt:inv.updatedAt,s:inv.s};
 }
 function saveCur(){
   if(cur.auto)cur.no=String(db.settings.nextNo);
@@ -1045,7 +1093,7 @@ $('#restoreFile').onchange=async e=>{
     const ids=new Set(db.invoices.map(x=>x.id));let add=0;
     d.invoices.forEach(i=>{
       const ok=i&&typeof i.id==='string'&&/^[\w-]{1,40}$/.test(i.id)&&i.no!=null&&Array.isArray(i.items)&&i.items.every(x=>x&&typeof x==='object');
-      if(ok&&!ids.has(i.id)){i.no=String(i.no);i.createdAt=Number(i.createdAt)||Date.now();db.invoices.push(i);ids.add(i.id);add++}
+      if(ok&&!ids.has(i.id)){i.no=String(i.no);i.bk=i.bk?(i.bk.id==='none'?{id:'none',bank:'',acc:'',sheba:'',holder:''}:cleanBank(i.bk)):null;i.createdAt=Number(i.createdAt)||Date.now();db.invoices.push(i);ids.add(i.id);add++}
     });
     const mx=Math.max(0,...db.invoices.map(i=>/^\d+$/.test(i.no)?+i.no:0));
     if(mx>=db.settings.nextNo)db.settings.nextNo=mx+1;
@@ -1056,13 +1104,17 @@ $('#restoreFile').onchange=async e=>{
         else if(k==='accent'){if(/^#[0-9a-f]{6}$/i.test(v))db.settings[k]=v}
         else if(k==='tpl'){if(['modern','exec','min','classic'].includes(v))db.settings[k]=v}
         else if(k==='size'){if(v==='a4'||v==='a5')db.settings[k]=v}
+        else if(k==='banks'){if(Array.isArray(v))db.settings.banks=v.map(cleanBank).filter(Boolean).slice(0,30)}
         else if(typeof DEF[k]==='number'){if(Number.isFinite(+v)&&+v>0)db.settings[k]=Math.floor(+v)}
         else if(typeof DEF[k]==='boolean')db.settings[k]=!!v;
         else if(typeof v==='string'&&v.length<2000)db.settings[k]=v;}
       st=1;
     }
     const mx2=Math.max(0,...db.invoices.map(i=>/^\d+$/.test(i.no)?+i.no:0));if(mx2>=db.settings.nextNo)db.settings.nextNo=mx2+1;
-    persist();renderHist();if(st){fillSettings();renderPreview()}toast(`${add} فاکتور بازیابی شد`+(st?' و تنظیمات به‌روز شد':''));
+    if(st){const S=db.settings;
+      if(!Array.isArray(d.settings.banks)&&(S.acc||S.sheba)){const b=cleanBank({bank:S.bank,acc:S.acc,sheba:S.sheba,holder:S.holder}),ex=S.banks.find(x=>sameBank(x,b));if(ex)S.defBank=ex.id;else{S.banks.push(b);S.defBank=b.id}}
+      S.banksV=1;migrateBanks(S);syncLegacyBank()}
+    persist();renderHist();if(st){fillSettings();renderPreview();renderInvLook()}toast(`${add} فاکتور بازیابی شد`+(st?' و تنظیمات به‌روز شد':''));
   }catch(err){toast('فایل پشتیبان معتبر نیست')}
 };
 
@@ -1070,12 +1122,12 @@ $('#restoreFile').onchange=async e=>{
 function sxSum(){
   const st=db.settings,T=Object.fromEntries(TPLS),put=(k,v)=>{const el=document.querySelector('[data-sxs="'+k+'"]');if(el)el.textContent=v};
   put('head',[st.brand,st.title].filter(Boolean).join(' · ')||'نام و عنوان روی فاکتور');
-  put('bank',st.acc?[st.bank,'حساب منتهی به '+String(st.acc).slice(-4)].filter(Boolean).join(' · '):'هنوز وارد نشده');
+  put('bank',st.banks.length?(st.banks.length>1?st.banks.length+' حساب · ':'')+'پیش‌فرض: '+bankLabel(defBank()):'هنوز حسابی ثبت نشده');
   put('img',[st.logo?'لوگو ثبت شده':'بدون لوگو',st.sign?'امضا ثبت شده':'بدون امضا'].join(' · '));
   put('look',[T[st.tpl]||'',String(st.size||'a4').toUpperCase()].filter(Boolean).join(' · '));
   put('def','شمارهٔ بعدی '+st.nextNo);
 }
-function fillSettings(){sxSum();
+function fillSettings(){sxSum();renderBanks();
   $('#s_defWords').checked=!!db.settings.defWords;
   $$('[data-s]').forEach(el=>{el.value=db.settings[el.dataset.s]==null?'':db.settings[el.dataset.s]});
   $('#logoImg').src=db.settings.logo||'';$('#logoImg').style.visibility=db.settings.logo?'visible':'hidden';
@@ -1170,7 +1222,63 @@ function renderTpls(){
   $('#swatches').innerHTML=ACCENTS.map(([c,n])=>`<button type="button" class="${c===ac?'on':''}" style="background:${c}" data-ac="${c}" title="${n}" aria-label="${n}"></button>`).join('')+`<input type="color" id="swCustom" value="${ac}" aria-label="رنگ دلخواه"${custom?' class="on"':''}>`;
 }
 let thumbT;const thumbsLater=()=>{clearTimeout(thumbT);thumbT=setTimeout(renderTpls,400)};
-function setLook(k,v){db.settings[k]=v;persist();sxSum();if(!cur.id){cur[k]=v;touch();renderPreview()}renderTpls()}
+function setLook(k,v){db.settings[k]=v;persist();sxSum();if(!cur.id&&!cur.dirty){cur[k]=v;db.draft=null;persist();renderPreview();renderInvLook()}renderTpls()}
+function renderInvLook(){
+  const tp=cur.tpl||'classic',ac=accOf(cur);
+  $('#iv_tpl').innerHTML=TPLS.map(([k,n])=>`<button type="button" role="radio" aria-checked="${tp===k}" class="${tp===k?'on':''}" data-tpl="${k}">${n}</button>`).join('');
+  $$('#iv_size button').forEach(b=>b.classList.toggle('on',b.dataset.size===(cur.size||'a4')));
+  $('#iv_sw').innerHTML=ACCENTS.map(([c,n])=>`<button type="button" class="${c===ac?'on':''}" style="background:${c}" data-ac="${c}" title="${n}" aria-label="${n}"></button>`).join('');
+  $('#iv_refresh').hidden=!cur.id;
+  renderBankSelect();
+}
+function setInvLook(k,v){if(cur[k]===v)return;cur[k]=v;touch();renderInvLook()}
+$('#iv_tpl').addEventListener('click',e=>{const b=e.target.closest('[data-tpl]');if(b)setInvLook('tpl',b.dataset.tpl)});
+$('#iv_size').addEventListener('click',e=>{const b=e.target.closest('[data-size]');if(b)setInvLook('size',b.dataset.size)});
+$('#iv_sw').addEventListener('click',e=>{const b=e.target.closest('[data-ac]');if(b)setInvLook('accent',b.dataset.ac)});
+$('#bRefreshSeller').onclick=()=>{cur.s=Object.fromEntries(SELLER_KEYS.map(k=>[k,db.settings[k]]));touch();toast('مشخصات فروشنده از تنظیمات به‌روز شد؛ برای ثبت، ذخیره کنید')};
+/* bank select in editor */
+function renderBankSelect(){
+  const sel=$('#f_bank'),bs=db.settings.banks,cb=cur.bk;
+  let val='',opts=bs.map(b=>`<option value="${esc(b.id)}">${esc(bankLabel(b))}${b.id===db.settings.defBank?' (پیش‌فرض)':''}</option>`);
+  const hit=cb&&bs.find(b=>b.id===cb.id&&sameBank(b,cb));
+  if(hit)val=hit.id;
+  else if(cb&&cb.id==='none')val='none';
+  else{const leg=cb||sellerOf(cur);if(leg.acc||leg.sheba){opts.unshift(`<option value="__keep">همان حساب ثبت‌شده: ${esc(bankLabel(leg))}</option>`);val='__keep'}else val='none'}
+  opts.push('<option value="none">بدون اطلاعات بانکی</option>');
+  sel.innerHTML=opts.join('');sel.value=val;
+}
+$('#f_bank').addEventListener('change',e=>{const v=e.target.value;if(v==='__keep')return;
+  if(v==='none')cur.bk={id:'none',bank:'',acc:'',sheba:'',holder:''};else{const b=db.settings.banks.find(x=>x.id===v);if(b)cur.bk=Object.assign({},b)}
+  touch();renderBankSelect()});
+/* bank list in settings */
+let bkEdit=null;
+function renderBanks(){
+  const st=db.settings;
+  $('#bankList').innerHTML=st.banks.length?st.banks.map(b=>`<div class="bk-item${b.id===st.defBank?' def':''}" data-bk="${esc(b.id)}">
+    <div class="bk-main"><b>${esc(b.bank||'حساب بانکی')}${b.id===st.defBank?'<span class="bk-tag">پیش‌فرض</span>':''}</b>
+      ${b.acc?`<span class="num">حساب: ${esc(b.acc)}</span>`:''}${b.sheba?`<span class="num">شبا: IR${esc(b.sheba.replace(/^IR/i,''))}</span>`:''}${b.holder?`<span>به نام: ${esc(b.holder)}</span>`:''}</div>
+    <div class="bk-acts">${b.id!==st.defBank?'<button class="btn sm" type="button" data-bka="def">پیش‌فرض</button>':''}<button class="btn sm" type="button" data-bka="edit">ویرایش</button><button class="btn sm del" type="button" data-bka="del">حذف</button></div>
+  </div>`).join(''):'<div class="bk-empty">هنوز حسابی ثبت نشده است.</div>';
+}
+function openBankForm(b){bkEdit=b?b.id:null;$('#b_bank').value=b?b.bank:'';$('#b_acc').value=b?b.acc:'';$('#b_sheba').value=b?b.sheba:'';$('#b_holder').value=b?b.holder:(defBank()||{}).holder||'';$('#bankForm').hidden=false;$('#bBankAdd').hidden=true;$('#b_bank').focus()}
+function closeBankForm(){bkEdit=null;$('#bankForm').hidden=true;$('#bBankAdd').hidden=false}
+function banksChanged(){migrateBanks(db.settings);syncLegacyBank();persist();renderBanks();sxSum();if(!cur.id&&!cur.dirty){const d=defBank();cur.bk=d?Object.assign({},d):null;renderPreview()}renderBankSelect()}
+$('#bBankAdd').onclick=()=>openBankForm(null);
+$('#bBankCancel').onclick=closeBankForm;
+$('#bBankSave').onclick=()=>{
+  const v={bank:$('#b_bank').value,acc:norm($('#b_acc').value).replace(/\s/g,''),sheba:norm($('#b_sheba').value).replace(/\s|^IR/gi,''),holder:$('#b_holder').value};
+  if(!v.acc.trim()&&!v.sheba.trim()){toast('شماره حساب یا شبا را وارد کنید');return}
+  const st=db.settings;
+  if(bkEdit){const b=st.banks.find(x=>x.id===bkEdit);if(b)Object.assign(b,cleanBank(Object.assign({id:b.id},v)))}
+  else{const b=cleanBank(v);st.banks.push(b);if(st.banks.length===1)st.defBank=b.id}
+  closeBankForm();banksChanged();toast('حساب ذخیره شد');
+};
+$('#bankList').addEventListener('click',e=>{
+  const a=e.target.closest('[data-bka]');if(!a)return;const id=a.closest('[data-bk]').dataset.bk,st=db.settings,b=st.banks.find(x=>x.id===id);if(!b)return;
+  if(a.dataset.bka==='def'){st.defBank=id;banksChanged()}
+  else if(a.dataset.bka==='edit')openBankForm(b);
+  else if(a.dataset.bka==='del'){if(!confirm('حساب «'+bankLabel(b)+'» حذف شود؟ فاکتورهای ذخیره‌شده اطلاعات بانکی خودشان را نگه می‌دارند.'))return;st.banks=st.banks.filter(x=>x.id!==id);if(bkEdit===id)closeBankForm();banksChanged()}
+});
 $('#tplList').addEventListener('click',e=>{const t=e.target.closest('[data-tpl]');if(t)setLook('tpl',t.dataset.tpl)});
 $('#tplList').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){const t=e.target.closest('[data-tpl]');if(t){e.preventDefault();setLook('tpl',t.dataset.tpl)}}});
 $('#sizeSeg').addEventListener('click',e=>{const b=e.target.closest('[data-size]');if(b)setLook('size',b.dataset.size)});
